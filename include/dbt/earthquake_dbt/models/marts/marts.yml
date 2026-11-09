@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: mart_daily_earthquake_counts
+    description: >
+      One row per UTC calendar date with earthquake volume and
+      magnitude stats for that day.
+    columns:
+      - name: event_date
+        tests:
+          - unique
+          - not_null
+      - name: earthquake_count
+        tests:
+          - not_null
+
+  - name: mart_magnitude_buckets
+    description: >
+      Earthquake counts and magnitude stats grouped into human-readable
+      severity buckets (micro, minor, light-moderate, strong, major).
+    columns:
+      - name: magnitude_bucket
+        tests:
+          - unique
+          - not_null
+      - name: earthquake_count
+        tests:
+          - not_null
+
+  - name: mart_region_activity
+    description: >
+      Earthquake activity rolled up by region (parsed from the USGS
+      place string), ranked by event count.
+    columns:
+      - name: region
+        tests:
+          - unique
+          - not_null
+      - name: earthquake_count
+        tests:
+          - not_null

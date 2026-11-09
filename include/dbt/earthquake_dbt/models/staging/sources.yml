@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: earthquakes
+        description: >
+          Raw USGS earthquake feed records, landed as-is by the
+          ingest_earthquakes_daily Airflow DAG. One row per earthquake
+          event id; full source payload kept in raw_payload for
+          lossless reprocessing.
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        columns:
+          - name: id
+            description: USGS event id, primary key on the raw table.
+            tests:
+              - unique
+              - not_null
+          - name: event_time
+            description: UTC timestamp the earthquake occurred.

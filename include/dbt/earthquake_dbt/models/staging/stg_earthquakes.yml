@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_earthquakes
+    description: >
+      One row per earthquake event, cleaned and typed from
+      raw.earthquakes: renamed columns, UTC event date derived, and a
+      best-effort region parsed out of the USGS place string.
+    columns:
+      - name: earthquake_id
+        description: USGS event id.
+        tests:
+          - unique
+          - not_null
+      - name: event_time
+        description: UTC timestamp the earthquake occurred.
+        tests:
+          - not_null
+      - name: event_date
+        description: UTC calendar date the earthquake occurred.
+        tests:
+          - not_null
+      - name: magnitude
+        description: Earthquake magnitude.
+      - name: place
+        description: Raw, trimmed USGS place description.
+      - name: region
+        description: >
+          Best-effort region extracted from place (text after the last
+          comma), falling back to the full place string.
+      - name: longitude
+        description: Event longitude in decimal degrees.
+      - name: latitude
+        description: Event latitude in decimal degrees.
+      - name: depth_km
+        description: Event depth in kilometers.
+      - name: ingested_at
+        description: Timestamp the row was loaded into raw.earthquakes.
+        tests:
+          - not_null
