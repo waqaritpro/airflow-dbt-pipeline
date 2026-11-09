@@ -3,8 +3,8 @@ Daily ELT ingestion DAG.
 
 Extracts the past-day earthquake feed from the USGS Earthquake Hazards
 Program API (public, no API key required) and loads it raw into the
-`raw.earthquakes` table in the warehouse Postgres. No transformation
-happens here by design -- that's dbt's job in a later week of this build.
+`raw.earthquakes` table in the warehouse Postgres. A dbt task then
+transforms that raw data into staging and mart models.
 """
 from __future__ import annotations
 
@@ -13,10 +13,13 @@ import json
 
 import requests
 from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 API_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 WAREHOUSE_CONN_ID = "warehouse_postgres"
+DBT_PROJECT_DIR = "/opt/airflow/include/dbt/earthquake_dbt"
+DBT_BIN = "/home/airflow/dbt-venv/bin/dbt"
 
 CREATE_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS raw;"
 
@@ -44,11 +47,11 @@ ON CONFLICT (id) DO NOTHING;
 
 @dag(
     dag_id="ingest_earthquakes_daily",
-    description="Daily raw ingest of USGS earthquake data into the warehouse",
+    description="Daily ingest of USGS earthquake data, then dbt transform into marts",
     schedule="@daily",
     start_date=datetime.datetime(2026, 10, 1),
     catchup=False,
-    tags=["elt", "ingestion", "week1"],
+    tags=["elt", "ingestion", "dbt", "week2"],
 )
 def ingest_earthquakes_daily():
     @task
@@ -94,7 +97,17 @@ def ingest_earthquakes_daily():
 
         return len(rows)
 
-    load(extract())
+    transform = BashOperator(
+        task_id="transform",
+        bash_command=(
+            f"{DBT_BIN} source freshness "
+            f"--project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROJECT_DIR} "
+            f"&& {DBT_BIN} build "
+            f"--project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROJECT_DIR}"
+        ),
+    )
+
+    load(extract()) >> transform
 
 
 ingest_earthquakes_daily()
